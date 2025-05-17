@@ -36,4 +36,3 @@ EXPOSE 8080
 # Lệnh để chạy ứng dụng khi container khởi động
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-# Biến môi trường cho cấu hình Database sẽ được đặt trong docker-compose.yml

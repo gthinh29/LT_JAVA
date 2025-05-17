@@ -1,61 +1,53 @@
-# docker-compose.yml tại thư mục gốc của dự án (task-management-app/)
-# Đã xóa dòng version: '3.8' theo khuyến cáo của Docker Compose mới
-
 services:
 
-  # Service cho Database (MySQL)
+  # Dịch vụ cơ sở dữ liệu
   db:
-    image: mysql:8.0 # Hoặc phiên bản khác, ví dụ: mysql:latest, mysql:5.7
-    restart: always # Tự động khởi động lại nếu container dừng
-    environment: # Cấu hình biến môi trường cho MySQL Server
-      MYSQL_DATABASE: taskdb        # Tên Database sẽ được tạo tự động
-      MYSQL_USER: devuser     # Tên người dùng sẽ được tạo tự động
-      MYSQL_PASSWORD: devpassword # Mật khẩu cho người dùng trên
-      MYSQL_ROOT_PASSWORD: rootpassword # Mật khẩu cho tài khoản root (nên dùng mật khẩu mạnh hơn trong production)
-      # Thêm cấu hình để sử dụng phương thức xác thực mysql_native_password
+    image: mysql:8.0
+    restart: always # Luôn khởi động lại nếu dừng
+    environment:
+      MYSQL_DATABASE: taskdb
+      MYSQL_USER: devuser
+      MYSQL_PASSWORD: devpassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+      # Đảm bảo tương thích (MySQL 8 mặc định dùng caching_sha2_password)
       MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
     ports:
-      - "3306:3306" # Mở cổng 3306 của DB ra máy host (tùy chọn nhưng tiện cho dev)
+      - "3306:3306"
     volumes:
-      - db_data:/var/lib/mysql # Lưu trữ dữ liệu DB
-      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql # Tùy chọn: script init DB
-    healthcheck: # Thêm Healthcheck để kiểm tra DB đã sẵn sàng chưa
+      - db_data:/var/lib/mysql # Lưu trữ dữ liệu DB bền vững
+    healthcheck: # Kiểm tra DB đã sẵn sàng
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
-      interval: 5s # Kiểm tra mỗi 5 giây
-      timeout: 5s # Timeout sau 5 giây nếu không phản hồi
-      retries: 5 # Thử lại 5 lần trước khi báo lỗi
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Chờ trước khi bắt đầu kiểm tra
 
-  # Service cho Backend (Spring Boot)
+  # Dịch vụ Backend
   backend:
-    build: ./task-management-backend # Build từ Dockerfile trong thư mục backend
+    build: ./task-management-backend # Build từ Dockerfile trong thư mục này
     ports:
-      - "8080:8080" # Mở cổng 8080 của Backend ra máy host
-    environment: # Cấu hình biến môi trường cho ứng dụng Spring Boot
-      # Các biến này GHI ĐÈ lên cấu hình trong application.properties nếu cùng tên
-      # Đây là cách quản lý cấu hình Database tốt nhất trong Docker Compose
+      - "8080:8080"
+    environment:
+      # Cấu hình kết nối DB cho Spring Boot
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/taskdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: devuser
       SPRING_DATASOURCE_PASSWORD: devpassword
-      # Các biến khác (ví dụ: cấu hình Spring Security nếu đặt ở đây)
-      # SPRING_SECURITY_USER_NAME: admin
-      # SPRING_SECURITY_USER_PASSWORD: adminpassword
-    depends_on: # Đảm bảo Backend chờ DB hoàn toàn sẵn sàng
+    depends_on:
       db:
-        condition: service_healthy # Thay vì service_started
+        condition: service_healthy # Chờ DB khỏe mạnh hoàn toàn
 
-  # Service cho Frontend (Next.js)
+  # Dịch vụ Frontend
   frontend:
-    build: ./task-management-frontend # Build từ Dockerfile trong thư mục frontend
+    build: ./task-management-frontend # Build từ Dockerfile trong thư mục này
     ports:
-      - "3000:3000" # Mở cổng 3000 của Frontend ra máy host
-    environment: # Biến môi trường cho Next.js
-      NEXT_PUBLIC_BACKEND_API_URL: http://backend:8080 # Sử dụng tên service 'backend'
-    depends_on: # Đảm bảo Frontend chờ Backend khởi động (tùy chọn)
+      - "3000:3000"
+    environment:
+      # URL API Backend cho Frontend Next.js
+      NEXT_PUBLIC_BACKEND_API_URL: http://backend:8080
+    depends_on:
       backend:
-        condition: service_started # Có thể đổi thành service_healthy nếu backend có healthcheck
-        # Hoặc bỏ depends_on nếu frontend có logic xử lý khi backend chưa sẵn sàng
+        condition: service_started # Chờ Backend khởi động
 
-# Định nghĩa các Docker Volumes được sử dụng
-volumes: # Đảm bảo khối này được thêm vào và căn lề ngang hàng với 'services:'
-  db_data: # Đảm bảo dòng này được căn lề thụt vào so với 'volumes:'
-  # Các volume khác nếu có
+# Định nghĩa các volume để lưu trữ dữ liệu
+volumes:
+  db_data: # Volume cho dữ liệu MySQL
