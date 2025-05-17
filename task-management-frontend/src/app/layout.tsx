@@ -1,29 +1,49 @@
-// task-management-frontend/src/app/layout.tsx
-
 import React from 'react';
-// Import file global CSS (đường dẫn tương đối từ file layout.tsx đến file globals.css)
-import '../styles/globals.css';
+import './globals.css';
+import { Inter } from 'next/font/google';
+import { cn } from '@/utils/cn';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import { MotionConfig } from "framer-motion";
 
-// Metadata cho ứng dụng (sẽ hiển thị trên tab trình duyệt)
-// Có thể override ở từng page hoặc layout con nếu cần
+const inter = Inter({
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
+  variable: '--font-sans',
+});
+
 export const metadata = {
-  title: 'Task Management App', // Tiêu đề mặc định
-  description: 'Ứng dụng quản lý công việc đơn giản được xây dựng với Next.js, Spring Boot, MySQL', // Mô tả mặc định
+  title: {
+    default: 'TaskMaster Pro',
+    template: '%s | TaskMaster Pro',
+  },
+  description: 'Ứng dụng quản lý công việc hiệu quả, trực quan và dễ sử dụng.',
+  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-// Component Layout gốc của ứng dụng
-// Nhận prop 'children' là nội dung của trang hoặc layout lồng ghép bên trong
 export default function RootLayout({
-  children, // children sẽ là nội dung từ src/app/page.tsx hoặc các route con khác
+  children,
 }: {
-  children: React.ReactNode; // Định nghĩa kiểu dữ liệu cho children
+  children: React.ReactNode;
 }) {
   return (
-    // Cấu trúc HTML cơ bản của một trang web
-    <html lang="en"> {/* Đặt ngôn ngữ của trang */}
-      <body>
-        {/* Nội dung chính của trang sẽ được render tại vị trí của {children} */}
-        {children}
+    <html lang="vi" suppressHydrationWarning>
+      <head />
+      <body
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased",
+          inter.variable
+        )}
+      >
+        <MotionConfig reducedMotion="user">
+          <div className="relative flex min-h-dvh flex-col">
+            <Header />
+            <main className="flex-1 container main-container-padding py-8 md:py-12">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </MotionConfig>
       </body>
     </html>
   );
