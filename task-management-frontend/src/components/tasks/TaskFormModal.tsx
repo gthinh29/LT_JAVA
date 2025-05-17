@@ -344,11 +344,11 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ isOpen, onClose, onSubmit
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="bg-card text-card-foreground rounded-lg shadow-2xl w-full max-w-sm p-6 md:p-6 relative my-auto" // Thêm my-auto để căn giữa theo chiều dọc nếu có scroll
+            className="bg-card text-card-foreground rounded-lg shadow-2xl w-full max-w-sm p-5 md:p-6 relative my-auto" // Thêm my-auto để căn giữa theo chiều dọc nếu có scroll
             onClick={(e) => e.stopPropagation()} 
           >
-            <div className="flex items-center justify-center mb-5 relative">
-              <h3 className="text-1.5xl lg:text-1.5xl font-bold leading-tight tracking-tight mb-10 text-center text-foreground">
+            <div className="flex items-center justify-center mb-2 relative">
+              <h3 className="text-md font-semibold text-foreground text-center">
                 {taskToEdit ? 'Chỉnh sửa Công việc' : 'Thêm Công việc Mới'}
               </h3>
               <Button type="button" variant="ghost" size="icon" onClick={onClose} className="h-6 w-6 rounded-full absolute top-0 right-0 -mt-4 -mr-4 text-muted-foreground hover:text-foreground">
@@ -356,7 +356,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ isOpen, onClose, onSubmit
               </Button>
             </div>
 
-            <div className="mb-3 min-h-[36px]">
+            <div className="mb-1 min-h-[20px]">
               <AnimatePresence mode="wait">
                 {apiError && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration: 0.2}}>

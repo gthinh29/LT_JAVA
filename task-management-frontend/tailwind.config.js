@@ -3,9 +3,10 @@ module.exports = {
   content: [
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/globals.css",
+    // Bạn có thể bỏ dòng "./src/app/globals.css" nếu bạn đang dùng @layer directives
+    // trong globals.css, vì Tailwind sẽ tự động quét các file đó qua các đường dẫn trên.
   ],
-  darkMode: 'class',
+  darkMode: 'class', // Hoặc 'media' tùy theo cách bạn quản lý dark mode
   theme: {
     container: {
       center: true,
@@ -71,7 +72,26 @@ module.exports = {
       transitionDuration: {
         '250': '250ms',
       },
+      // Keyframes và animations sẽ được cung cấp bởi plugin tailwindcss-animate
+      // Nếu bạn muốn thêm keyframes tùy chỉnh, bạn có thể thêm vào đây:
+      // keyframes: {
+      //   "accordion-down": {
+      //     from: { height: "0" },
+      //     to: { height: "var(--radix-accordion-content-height)" },
+      //   },
+      //   "accordion-up": {
+      //     from: { height: "var(--radix-accordion-content-height)" },
+      //     to: { height: "0" },
+      //   },
+      // },
+      // animation: {
+      //   "accordion-down": "accordion-down 0.2s ease-out",
+      //   "accordion-up": "accordion-up 0.2s ease-out",
+      // },
     },
   },
-  plugins: [require('@tailwindcss/forms')],
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('tailwindcss-animate'), // Đã thêm plugin tailwindcss-animate
+  ],
 };
