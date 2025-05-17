@@ -11,6 +11,8 @@
   }
   html {
     @apply scroll-smooth;
+    /* Ngăn scroll toàn trang khi modal có thanh cuộn riêng (nếu cần) */
+    /* has-[dialog[open]]:overflow-hidden; */ 
   }
   body {
     @apply bg-background text-foreground antialiased font-sans;
@@ -22,6 +24,18 @@
   h1 { @apply text-3xl lg:text-4xl; }
   h2 { @apply text-2xl lg:text-3xl; }
   h3 { @apply text-xl lg:text-2xl; }
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
+  input[type="date"] {
+    appearance: none;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+  }
 }
 
 @layer components {
@@ -29,8 +43,8 @@
     @apply px-4 sm:px-6 lg:px-8;
   }
 
-  .button {
-    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  .button-base {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50;
   }
   .button-primary {
     @apply bg-primary text-primary-foreground hover:bg-primary/90;
@@ -52,20 +66,22 @@
   }
 
   .input-field {
-    @apply flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50;
+     /* Mặc định h-10, px-3, py-2, text-sm. TaskFormModal sẽ override nếu cần */
   }
   .textarea-field {
-     @apply flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+     @apply flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50;
+     /* min-h sẽ được set inline hoặc qua class cụ thể */
   }
   .select-field {
-     @apply flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1;
+     @apply flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1;
   }
 
   .card {
     @apply rounded-lg border bg-card text-card-foreground shadow-subtle;
   }
   .card-header {
-    @apply flex flex-col space-y-1.5 p-4 sm:p-6;
+    @apply flex flex-col space-y-1.5 p-5 sm:p-6;
   }
   .card-title {
     @apply text-xl font-semibold leading-none tracking-tight;
@@ -74,19 +90,153 @@
     @apply text-sm text-muted-foreground;
   }
   .card-content {
-    @apply p-4 sm:p-6 pt-0;
+    @apply p-5 sm:p-6 pt-0;
   }
   .card-footer {
-    @apply flex items-center p-4 sm:p-6 pt-0;
+    @apply flex items-center p-5 sm:p-6 pt-0;
   }
 
-  .alert {
+  .alert-base {
     @apply relative w-full rounded-lg border p-4 [&:has(svg)]:pl-11 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground;
   }
   .alert-destructive {
     @apply border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive;
   }
   .alert-success {
-    @apply border-green-500/50 text-green-700 dark:border-green-600 [&>svg]:text-green-600;
+    @apply border-green-500/50 text-green-700 dark:border-green-600 dark:text-green-400 [&>svg]:text-green-600 dark:[&>svg]:text-green-500;
+  }
+
+  /* --- Custom Styles for React DatePicker (Small Version for Modal) --- */
+  .react-datepicker-popper {
+    z-index: 1001 !important; 
+    @apply shadow-xl rounded-lg mt-1;
+  }
+
+  .custom-datepicker-calendar-small { 
+    @apply bg-card border border-border rounded-lg text-xs;
+    font-family: var(--font-sans);
+    width: 250px; /* Giảm độ rộng lịch hơn nữa */
+  }
+
+  .custom-datepicker-calendar-small .react-datepicker__header {
+    @apply bg-card text-foreground pt-2 pb-1.5 px-1.5 rounded-t-lg border-b border-border;
+  }
+  .custom-datepicker-calendar-small .react-datepicker__current-month {
+    @apply text-foreground font-semibold text-xs mb-1; 
+  }
+  .custom-datepicker-calendar-small .react-datepicker__navigation {
+    @apply top-2 h-6 w-6; 
+  }
+  .custom-datepicker-calendar-small .react-datepicker__navigation--previous {
+    @apply border-r-foreground/50 hover:border-r-foreground;
+    border-right-width: 1.5px;
+    left: 6px; /* Dịch chuyển nút Previous */
+  }
+  .custom-datepicker-calendar-small .react-datepicker__navigation--next {
+    @apply border-l-foreground/50 hover:border-l-foreground;
+    border-left-width: 1.5px;
+    right: 6px; /* Dịch chuyển nút Next */
+  }
+   .custom-datepicker-calendar-small .react-datepicker__navigation-icon::before {
+    border-color: hsl(var(--foreground)) !important;
+    border-width: 1.5px 1.5px 0 0 !important;
+    height: 5px !important; 
+    width: 5px !important;  
+    top: 1px !important; 
+  }
+
+  .custom-datepicker-calendar-small .react-datepicker__month-container {
+    @apply px-0.5 pb-0.5;
+  }
+  .custom-datepicker-calendar-small .react-datepicker__day-names {
+    @apply flex justify-around mb-0.5; 
+  }
+  .custom-datepicker-calendar-small .react-datepicker__week {
+    @apply flex justify-around;
+  }
+  .custom-datepicker-calendar-small .react-datepicker__day-name {
+    @apply w-7 h-7 flex items-center justify-center text-[10px] font-medium text-muted-foreground; /* Font nhỏ hơn cho tên ngày */
+  }
+  .custom-datepicker-day-small { 
+    @apply w-7 h-7 flex items-center justify-center rounded-full cursor-pointer m-[1px];
+    @apply text-foreground hover:bg-accent hover:text-accent-foreground;
+    @apply transition-colors duration-150 text-[11px]; /* Font nhỏ hơn cho ngày */
+  }
+  .custom-datepicker-day-small.react-datepicker__day--selected,
+  .custom-datepicker-day-small.react-datepicker__day--keyboard-selected {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+  .custom-datepicker-day-small.react-datepicker__day--outside-month {
+    @apply text-muted-foreground/30 cursor-default hover:bg-transparent; 
+  }
+  .custom-datepicker-today-small.react-datepicker__day:not(.react-datepicker__day--selected) { 
+    @apply bg-primary/10 text-primary font-semibold; 
+  }
+
+   .custom-datepicker-calendar-small .react-datepicker__year-read-view,
+   .custom-datepicker-calendar-small .react-datepicker__month-read-view,
+   .custom-datepicker-calendar-small .react-datepicker__month-year-read-view {
+      @apply border border-transparent rounded px-1 py-0.5 text-xs hover:border-border; 
+      display: inline-block;
+   }
+   .custom-datepicker-calendar-small .react-datepicker__year-read-view--down-arrow,
+   .custom-datepicker-calendar-small .react-datepicker__month-read-view--down-arrow,
+   .custom-datepicker-calendar-small .react-datepicker__month-year-read-view--down-arrow {
+     border-color: hsl(var(--muted-foreground)) !important;
+     border-width: 1px 1px 0 0 !important; 
+     height: 4px !important; 
+     width: 4px !important;  
+     top: 2px !important;    
+     right: -4px !important; /* Điều chỉnh để gần text hơn */
+     margin-top: 0px !important;
+   }
+   .custom-datepicker-calendar-small .react-datepicker__year-dropdown,
+   .custom-datepicker-calendar-small .react-datepicker__month-dropdown,
+   .custom-datepicker-calendar-small .react-datepicker__month-year-dropdown {
+      @apply bg-card border border-border rounded-md shadow-lg max-h-36 overflow-y-auto text-xs; /* Giảm max-height */
+   }
+   .custom-datepicker-calendar-small .react-datepicker__year-option,
+   .custom-datepicker-calendar-small .react-datepicker__month-option,
+   .custom-datepicker-calendar-small .react-datepicker__month-year-option {
+      @apply px-2 py-1 text-xs hover:bg-accent; 
+   }
+   .custom-datepicker-calendar-small .react-datepicker__year-option--selected_year,
+   .custom-datepicker-calendar-small .react-datepicker__month-option--selected_month {
+      @apply bg-primary/20 text-primary font-semibold;
+   }
+
+  /* Nút X để hủy ngày (Clear DatePicker) */
+  /* Container của DatePicker cần có class `relative` để định vị nút này */
+  .react-datepicker__input-container .react-datepicker__close-icon {
+    position: absolute;
+    right: 8px; /* Điều chỉnh vị trí sát góc phải hơn */
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0 !important;
+    cursor: pointer;
+    background-color: transparent !important;
+    border: none !important;
+    outline: none !important;
+    width: 20px !important; /* Kích thước vùng click */
+    height: 20px !important;/* Kích thước vùng click */
+    opacity: 0.75;
+  }
+  .react-datepicker__input-container .react-datepicker__close-icon:hover {
+    opacity: 1;
+  }
+  .react-datepicker__input-container .react-datepicker__close-icon::after {
+    content: '×'; /* Ký tự 'x' */
+    font-family: Arial, sans-serif; /* Font rõ ràng cho 'x' */
+    color: hsl(var(--muted-foreground)) !important;
+    font-size: 25px !important; /* Kích thước ký tự 'x' */
+    line-height: 1;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100%;
+    height: 100%;
+  }
+   .react-datepicker__input-container .react-datepicker__close-icon:hover::after {
+    color: hsl(var(--foreground)) !important;
   }
 }

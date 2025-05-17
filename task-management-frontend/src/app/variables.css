@@ -1,11 +1,12 @@
 :root {
   --font-sans: 'Inter', sans-serif;
 
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  /* Light Mode Colors */
+  --background: 0 0% 100%; /* White */
+  --foreground: 222.2 84% 4.9%; /* Very Dark Blue (almost black) */
 
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 210 40% 96.1%; /* Light Gray */
+  --muted-foreground: 215.4 16.3% 46.9%; /* Medium Gray */
 
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
@@ -13,53 +14,54 @@
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
 
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
+  --border: 214.3 31.8% 91.4%; /* Light Gray Border */
+  --input: 214.3 31.8% 91.4%; /* Light Gray Input Border */
 
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 221.2 83.2% 53.3%; /* Bright Blue */
+  --primary-foreground: 210 40% 98%; /* Almost White */
 
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 210 40% 96.1%; /* Light Gray */
+  --secondary-foreground: 222.2 47.4% 11.2%; /* Dark Blue */
 
   --accent: 210 40% 96.1%;
   --accent-foreground: 222.2 47.4% 11.2%;
 
-  --destructive: 0 84.2% 60.2%;
+  --destructive: 0 84.2% 60.2%; /* Bright Red */
   --destructive-foreground: 210 40% 98%;
 
-  --ring: 215 20.2% 65.1%;
+  --ring: 221.2 83.2% 53.3%; /* Bright Blue for focus ring */
 
-  --radius: 0.5rem;
+  --radius: 0.5rem; /* Default border radius */
 }
 
 .dark {
-  --background: 222.2 84% 4.9%; /* Nền tối */
-  --foreground: 210 40% 98%; /* Chữ sáng */
+  /* Dark Mode Colors - Enhanced Contrast */
+  --background: 224 71.4% 4.1%; /* Darker Blue-Black */
+  --foreground: 210 20% 98%; /* Off-White */
 
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%; /* Chữ muted sáng hơn */
+  --muted: 215 27.9% 16.9%; /* Dark Gray-Blue */
+  --muted-foreground: 217.9 10.6% 70.2%; /* Lighter Gray-Blue for better contrast */
 
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 224 71.4% 4.1%;
+  --popover-foreground: 210 20% 98%;
 
-  --card: 217.2 32.6% 12.5%; /* Nền card tối hơn một chút so với background */
-  --card-foreground: 210 40% 98%; /* Chữ trên card sáng */
+  --card: 220 40% 9%; /* Slightly lighter than background for depth */
+  --card-foreground: 210 20% 98%;
 
-  --border: 217.2 32.6% 27.5%; /* Border sáng hơn một chút để nổi bật */
-  --input: 217.2 32.6% 27.5%; /* Input border */
+  --border: 215 27.9% 22.9%; /* Slightly Lighter Gray-Blue Border */
+  --input: 215 27.9% 22.9%; 
 
-  --primary: 210 100% 66%; /* Màu primary sáng hơn cho dark mode */
-  --primary-foreground: 222.2 84% 4.9%; /* Chữ trên nút primary tối */
+  --primary: 208 100% 60%; /* Brighter Blue for Dark Mode */
+  --primary-foreground: 222.2 84% 4.9%; /* Dark text on primary button */
 
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 215 27.9% 16.9%;
+  --secondary-foreground: 210 20% 98%;
 
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 215 27.9% 16.9%;
+  --accent-foreground: 210 20% 98%;
 
-  --destructive: 0 72.2% 50.6%; /* Màu destructive có thể giữ nguyên hoặc làm sáng hơn chút */
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 70% 55%; /* Slightly adjusted Red */
+  --destructive-foreground: 210 20% 98%;
 
-  --ring: 210 100% 66%; /* Ring sáng hơn */
+  --ring: 208 100% 60%; /* Brighter Blue for focus ring in dark mode */
 }

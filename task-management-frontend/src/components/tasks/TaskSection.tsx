@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react'; // Bỏ useContext vì sẽ dùng useTaskModal
 import { motion, AnimatePresence } from 'framer-motion';
-import TaskItem, { TaskItemSkeleton } from './TaskItem';
-import TaskForm from './TaskForm';
+import TaskItem from './TaskItem';
 import { Task, getAllTasks, deleteTask } from '@/utils/apiClient';
-import { PlusCircle, ListFilter, ChevronDown, Info, Search, XIcon, AlertTriangle, LayoutGrid, List } from 'lucide-react';
+import { useTaskModal } from '@/app/layout'; // Import hook useTaskModal từ layout.tsx
+import { PlusCircle, ListFilter, ChevronDown, Info, Search, XIcon, AlertTriangle, LayoutGrid, List, SortAsc, SortDesc, CalendarClock, CheckSquare, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert';
 import { cn } from '@/utils/cn';
 
-type StatusFilter = Task['status'] | 'ALL';
-type SortOrder = 'newest' | 'oldest' | 'dueDate';
-type ViewMode = 'grid' | 'list';
+type StatusFilterOption = Task['status'] | 'ALL_UNCOMPLETED';
+type SortOrder = 'newest' | 'oldest' | 'dueDateAsc' | 'dueDateDesc' | 'titleAsc' | 'titleDesc';
+type ViewMode = 'list' | 'grid';
 
 const statusDisplayNames: Record<Task['status'], string> = {
   TODO: 'Cần làm',
@@ -20,16 +20,30 @@ const statusDisplayNames: Record<Task['status'], string> = {
   DONE: 'Hoàn thành',
 };
 
+const sortOptionLabels: Record<SortOrder, string> = {
+  newest: 'Mới cập nhật',
+  oldest: 'Cũ nhất (tạo)',
+  dueDateAsc: 'Hạn chót (tăng dần)',
+  dueDateDesc: 'Hạn chót (giảm dần)',
+  titleAsc: 'Tiêu đề (A-Z)',
+  titleDesc: 'Tiêu đề (Z-A)',
+};
+
+
 const TaskSection: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  
+  // Sử dụng hook useTaskModal để lấy các hàm từ context
+  // Hook này đã bao gồm kiểm tra context có tồn tại không
+  const { openNewTaskModal, openEditTaskModal } = useTaskModal(); 
+
+  const [activeView, setActiveView] = useState<'uncompleted' | 'completed'>('uncompleted');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterOption>('ALL_UNCOMPLETED');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -39,6 +53,7 @@ const TaskSection: React.FC = () => {
       setTasks(tasksData);
     } catch (err) {
       setApiError('Không thể tải danh sách công việc. Vui lòng kiểm tra kết nối và thử lại.');
+      console.error("Lỗi tải công việc:", err);
     } finally {
       setLoading(false);
     }
@@ -47,15 +62,19 @@ const TaskSection: React.FC = () => {
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
-
-  const handleSubmitSuccess = () => {
-    setEditingTask(null);
-    setIsFormOpen(false);
-    fetchTasks();
+  
+  const handleTaskStatusChange = (updatedTask: Task) => {
+    setTasks(prevTasks => 
+      prevTasks.map(task => task.id === updatedTask.id ? updatedTask : task)
+    );
+    if ((activeView === 'completed' && updatedTask.status !== 'DONE') ||
+        (activeView === 'uncompleted' && updatedTask.status === 'DONE')) {
+        setTimeout(() => fetchTasks(), 200); 
+    }
   };
 
   const handleDeleteTask = async (id: number) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa công việc này?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa công việc này không?')) {
       try {
         await deleteTask(id);
         fetchTasks();
@@ -65,56 +84,56 @@ const TaskSection: React.FC = () => {
     }
   };
 
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setIsFormOpen(true);
-    const formContainer = document.getElementById('task-form-motion-container');
-    if (formContainer) {
-      formContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingTask(null);
-    setIsFormOpen(false);
-  };
-
-  const toggleFormOpen = () => {
-    if (isFormOpen && editingTask) {
-      setEditingTask(null);
-    }
-    setIsFormOpen(!isFormOpen);
-    if (!isFormOpen && editingTask) setEditingTask(null);
-  };
-
   const filteredAndSortedTasks = useMemo(() => {
-    return tasks
-      .filter(task => {
-        const matchesFilter = statusFilter === 'ALL' || task.status === statusFilter;
-        const matchesSearch = searchTerm.trim() === '' ||
-          task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
-        return matchesFilter && matchesSearch;
-      })
-      .sort((a, b) => {
-        switch (sortOrder) {
-          case 'oldest':
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          case 'dueDate':
-            if (!a.dueDate && !b.dueDate) return 0;
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-          case 'newest':
-          default:
-            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-        }
-      });
-  }, [tasks, statusFilter, sortOrder, searchTerm]);
+    let filtered = tasks;
 
-  const listContainerVariants = {
+    if (activeView === 'completed') {
+      filtered = tasks.filter(task => task.status === 'DONE');
+    } else { 
+      if (statusFilter === 'ALL_UNCOMPLETED') {
+        filtered = tasks.filter(task => task.status !== 'DONE');
+      } else if (statusFilter === 'TODO' || statusFilter === 'IN_PROGRESS') {
+        filtered = tasks.filter(task => task.status === statusFilter);
+      }
+    }
+
+    if (searchTerm.trim() !== '') {
+      const searchTermLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(task =>
+        task.title.toLowerCase().includes(searchTermLower) ||
+        (task.description && task.description.toLowerCase().includes(searchTermLower))
+      );
+    }
+
+    return filtered.sort((a, b) => {
+      switch (sortOrder) {
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'dueDateAsc':
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        case 'dueDateDesc':
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        case 'titleAsc':
+          return a.title.localeCompare(b.title);
+        case 'titleDesc':
+          return b.title.localeCompare(a.title);
+        case 'newest':
+        default:
+          if (a.status === 'DONE' && b.status === 'DONE') {
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          }
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+    });
+  }, [tasks, activeView, statusFilter, sortOrder, searchTerm]);
+  
+   const listContainerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -132,144 +151,158 @@ const TaskSection: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.3, delay: 0.1, ease: "easeOut" } }
   };
   
-  const getNoTasksAlertTitle = (): string => {
-    if (searchTerm) return 'Không tìm thấy công việc.';
-    if (statusFilter === 'ALL') return 'Chưa có công việc nào.';
-    return `Không có công việc "${statusDisplayNames[statusFilter]}".`;
-  };
-
-  const getNoTasksAlertDescription = (): string => {
-    if (searchTerm) return 'Vui lòng thử từ khóa khác.';
-    if (statusFilter === 'ALL') return 'Hãy nhấn nút "Thêm Công việc" để bắt đầu.';
-    return 'Hãy thử một bộ lọc khác hoặc thêm công việc mới.';
-  };
-
-  const buttonText = useMemo(() => {
-    if (isFormOpen) {
-      return editingTask ? 'Đang sửa...' : 'Đóng Form';
+  const getNoTasksMessage = (): { title: string; description: string } => {
+    if (apiError) return { title: 'Đã xảy ra lỗi', description: apiError };
+    if (loading) return { title: 'Đang tải công việc...', description: 'Vui lòng đợi trong giây lát.' };
+    
+    if (activeView === 'completed') {
+      return searchTerm ? 
+        { title: 'Không tìm thấy công việc hoàn thành.', description: 'Vui lòng thử từ khóa khác.' } :
+        { title: 'Chưa có công việc nào hoàn thành.', description: 'Hoàn thành một vài công việc để xem chúng ở đây!' };
     }
-    return 'Thêm Công việc';
-  }, [isFormOpen, editingTask]);
+    
+    if (searchTerm) return { title: 'Không tìm thấy công việc.', description: 'Vui lòng thử từ khóa khác.' };
+    if (statusFilter === 'ALL_UNCOMPLETED') return { title: 'Tuyệt vời! Không có việc cần làm.', description: 'Nhấn "Thêm Task" để tạo công việc mới.'};
+    if (statusFilter === 'TODO') return { title: 'Không có công việc "Cần làm".', description: 'Bạn có thể thêm công việc mới hoặc kiểm tra các mục khác.'};
+    if (statusFilter === 'IN_PROGRESS') return { title: 'Không có công việc "Đang làm".', description: 'Hãy bắt đầu một công việc!'};
+    
+    return { title: 'Chưa có công việc nào.', description: 'Hãy nhấn nút "Thêm Task" để bắt đầu.'};
+  };
+
+  const SortIcon = useMemo(() => { 
+    if (sortOrder === 'dueDateAsc' || sortOrder === 'titleAsc') return SortAsc;
+    if (sortOrder === 'dueDateDesc' || sortOrder === 'titleDesc') return SortDesc;
+    if (sortOrder === 'newest' || sortOrder === 'oldest') return CalendarClock;
+    return ChevronDown;
+  }, [sortOrder]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <motion.div
         variants={sectionTitleVariants}
         initial="hidden"
         animate="visible"
-        className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-border pb-6 mb-8"
+        className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-border pb-5 mb-5"
       >
-        <h2 className="text-3xl font-bold text-foreground">
-          Quản lý Công việc
-        </h2>
-        <Button onClick={toggleFormOpen} variant="default" size="lg" className="button-primary w-full sm:w-auto group shadow-md hover:shadow-lg active:shadow-inner-sm">
-          <PlusCircle className={cn("h-5 w-5 mr-2 transition-transform duration-common ease-custom-bezier", isFormOpen && "rotate-[225deg]")} />
-          {buttonText}
+        <div className="flex items-center gap-3">
+            <Button 
+                type="button"
+                variant={activeView === 'uncompleted' ? "secondary" : "outline"} 
+                size="sm" 
+                onClick={() => {
+                    setActiveView('uncompleted');
+                    setStatusFilter('ALL_UNCOMPLETED'); 
+                }}
+                className="px-3 py-1.5 h-auto"
+            >
+                <Clock className="h-4 w-4 mr-1.5 opacity-80"/> Đang chờ
+            </Button>
+            <Button 
+                type="button"
+                variant={activeView === 'completed' ? "secondary" : "outline"} 
+                size="sm" 
+                onClick={() => setActiveView('completed')}
+                className="px-3 py-1.5 h-auto"
+            >
+                <CheckSquare className="h-4 w-4 mr-1.5 opacity-80"/> Hoàn thành
+            </Button>
+        </div>
+        <Button 
+            type="button"
+            onClick={openNewTaskModal} 
+            variant="default" 
+            size="default"
+            className="button-primary group shadow-md hover:shadow-lg active:shadow-inner-sm"
+        >
+          <PlusCircle className="h-5 w-5 mr-2" />
+          Thêm Task
         </Button>
       </motion.div>
 
-      <AnimatePresence mode="wait">
-        {isFormOpen && (
-          <motion.div
-            key="task-form-motion-container"
-            id="task-form-motion-container"
-            initial={{ opacity: 0, height: 0, y: -30, marginTop: '-2rem' }}
-            animate={{ opacity: 1, height: 'auto', y: 0, marginTop: '0rem', transition: { duration: 0.4, ease: [0.25, 1, 0.5, 1] } }}
-            exit={{ opacity: 0, height: 0, y: -30, marginTop: '-2rem', transition: { duration: 0.3, ease: [0.5, 0, 0.75, 0] } }}
-            className="overflow-hidden"
-          >
-            <TaskForm
-              onSubmitSuccess={handleSubmitSuccess}
-              taskToEdit={editingTask}
-              onCancelEdit={handleCancelEdit}
-              isVisible={isFormOpen}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {apiError && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <Alert variant="destructive" className="my-4">
-            <AlertTriangle className="h-4 w-4" />
+      {apiError && ( 
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-5 w-5" />
             <AlertTitle>Đã xảy ra lỗi</AlertTitle>
             <AlertDescription>{apiError}</AlertDescription>
           </Alert>
         </motion.div>
       )}
 
-      <motion.div
-        variants={controlsVariants}
-        initial="hidden"
-        animate="visible"
-        className="card-base p-4 shadow-sm"
-      >
-        <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
-          <div className="relative w-full lg:flex-1 lg:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Tìm theo tiêu đề, mô tả..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-base pl-10 pr-10"
-              aria-label="Tìm kiếm công việc"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7"
-                onClick={() => setSearchTerm('')}
-                aria-label="Xóa tìm kiếm"
-              >
-                <XIcon className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            )}
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <ListFilter className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-              <select
-                id="status-filter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="select-base flex-grow appearance-none bg-no-repeat bg-right pr-8"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.5em 1.5em' }}
-                aria-label="Lọc theo trạng thái"
-              >
-                <option value="ALL">Tất cả trạng thái</option>
-                <option value="TODO">Cần làm</option>
-                <option value="IN_PROGRESS">Đang làm</option>
-                <option value="DONE">Hoàn thành</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <ChevronDown className="h-5 w-5 text-muted-foreground transform -rotate-90 flex-shrink-0" />
-              <select
-                id="sort-order"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                className="select-base flex-grow appearance-none bg-no-repeat bg-right pr-8"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.5em 1.5em' }}
-                aria-label="Sắp xếp theo"
-              >
-                <option value="newest">Mới cập nhật</option>
-                <option value="oldest">Cũ nhất (tạo)</option>
-                <option value="dueDate">Ngày hết hạn</option>
-              </select>
-            </div>
-             <div className="flex items-center gap-0.5 border rounded-md p-0.5 bg-background self-stretch sm:self-center">
-                <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('grid')} className="h-8 w-8 rounded-sm">
-                    <LayoutGrid className="h-4 w-4"/>
+      {(tasks.length > 0 || searchTerm || activeView === 'completed') && (
+        <motion.div
+            variants={controlsVariants}
+            initial="hidden"
+            animate="visible"
+            className="card p-3.5 shadow-sm border border-border mb-5"
+        >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 items-center">
+            <div className="relative w-full lg:col-span-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <input
+                id="search-term-section"
+                type="text"
+                placeholder="Tìm kiếm công việc..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="input-field pl-9 pr-9 py-2 text-sm w-full h-9"
+                aria-label="Tìm kiếm công việc"
+                />
+                {searchTerm && (
+                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setSearchTerm('')} aria-label="Xóa tìm kiếm" >
+                    <XIcon className="h-4 w-4 text-muted-foreground" />
                 </Button>
-                <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('list')} className="h-8 w-8 rounded-sm">
-                    <List className="h-4 w-4"/>
-                </Button>
+                )}
             </div>
-          </div>
-        </div>
-      </motion.div>
+
+            <div className="flex items-center gap-3 w-full lg:col-span-1">
+                {activeView === 'uncompleted' && (
+                     <div className="relative flex-1">
+                        <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <select
+                        id="status-filter-section"
+                        value={statusFilter} 
+                        onChange={(e) => setStatusFilter(e.target.value as StatusFilterOption)}
+                        className="select-field pl-9 appearance-none bg-no-repeat bg-right pr-7 py-2 text-sm w-full h-9"
+                        style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25em 1.25em' }}
+                        aria-label="Lọc theo trạng thái chi tiết"
+                        >
+                        <option value="ALL_UNCOMPLETED">Tất cả (chưa HT)</option>
+                        <option value="TODO">Cần làm</option>
+                        <option value="IN_PROGRESS">Đang làm</option>
+                        </select>
+                    </div>
+                )}
+                <div className={cn("relative flex-1", activeView === 'completed' && "lg:col-start-1 lg:col-span-1")}>
+                    <SortIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <select
+                    id="sort-order-section"
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                    className="select-field pl-9 appearance-none bg-no-repeat bg-right pr-7 py-2 text-sm w-full h-9"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25em 1.25em' }}
+                    aria-label="Sắp xếp theo"
+                    >
+                    {Object.entries(sortOptionLabels).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                    ))}
+                    </select>
+                </div>
+            </div>
+            
+            <div className="flex items-center justify-end gap-0.5 lg:col-span-1">
+                    <Button type="button" variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('grid')} className="h-8 w-8 rounded-sm">
+                        <LayoutGrid className="h-4 w-4"/>
+                        <span className="sr-only">Xem dạng lưới</span>
+                    </Button>
+                    <Button type="button" variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('list')} className="h-8 w-8 rounded-sm">
+                        <List className="h-4 w-4"/>
+                        <span className="sr-only">Xem dạng danh sách</span>
+                    </Button>
+                </div>
+            </div>
+        </motion.div>
+      )}
 
       {loading && (
         <motion.div
@@ -277,25 +310,30 @@ const TaskSection: React.FC = () => {
           initial="hidden"
           animate="visible"
           className={cn(
-            "grid gap-6",
-            viewMode === 'grid' ? "sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+            "grid", 
+            viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" : "grid-cols-1 gap-1.5"
           )}
         >
-          {[...Array(viewMode === 'grid' ? 3 : 2)].map((_, i) => <TaskItemSkeleton key={`skeleton-${i}`} />)}
+          {[...Array(viewMode === 'grid' ? 8 : 5)].map((_, i) => (
+            <div key={`skeleton-${i}`} className="h-12 bg-muted rounded-md animate-pulse"></div>
+          ))}
         </motion.div>
       )}
 
-      {!loading && !apiError && filteredAndSortedTasks.length === 0 && (
-         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
-            <div className="my-12 text-center py-12 card-base">
-              <Info className="h-12 w-12 mx-auto mb-4 text-primary" />
-              <h3 className="text-xl font-semibold text-foreground mb-2">
-                {getNoTasksAlertTitle()}
-              </h3>
-              <p className="text-muted-foreground">
-                {getNoTasksAlertDescription()}
-              </p>
-            </div>
+      {!loading && filteredAndSortedTasks.length === 0 && (
+         <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.1, duration: 0.3 }}
+            className="my-10 text-center py-10 card shadow-sm border border-border"
+          >
+            <Info className="h-10 w-10 mx-auto mb-3 text-primary/80" />
+            <h3 className="text-lg font-semibold text-foreground mb-1.5">
+              {getNoTasksMessage().title}
+            </h3>
+            <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+              {getNoTasksMessage().description}
+            </p>
          </motion.div>
       )}
 
@@ -305,8 +343,8 @@ const TaskSection: React.FC = () => {
           initial="hidden"
           animate="visible"
           className={cn(
-            "grid gap-6",
-            viewMode === 'grid' ? "sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+            "grid",
+            viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" : "grid-cols-1 gap-1.5"
           )}
         >
           {filteredAndSortedTasks.map((task) => (
@@ -314,7 +352,8 @@ const TaskSection: React.FC = () => {
               key={task.id}
               task={task}
               onDeleteTask={handleDeleteTask}
-              onEditTask={handleEditTask}
+              onEditTask={() => openEditTaskModal(task)} 
+              onStatusChange={handleTaskStatusChange}
             />
           ))}
         </motion.div>
