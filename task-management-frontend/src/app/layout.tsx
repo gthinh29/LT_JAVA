@@ -2,20 +2,24 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
-import './globals.css'; // Đảm bảo import globals.css
+import './globals.css';
 import { Inter } from 'next/font/google';
 import { cn } from '@/utils/cn';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Sidebar from '@/components/layout/Sidebar';
 import TaskFormModal from '@/components/tasks/TaskFormModal';
-import { MotionConfig, motion } from "framer-motion";
-import { Task } from '@/utils/apiClient';
-import { TooltipProvider } from '@radix-ui/react-tooltip'; // Đảm bảo import này ĐÚNG
+import { MotionConfig, AnimatePresence, motion } from "framer-motion";
+import { Task, ProjectData, getProjects as fetchProjectsApi } from '@/utils/apiClient';
+import { TooltipProvider } from '@radix-ui/react-tooltip';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 
 interface TaskModalContextType {
-  openNewTaskModal: () => void;
+  openNewTaskModal: (preselectedProjectId?: number | null) => void;
   openEditTaskModal: (task: Task) => void;
+  lastTaskOperationTimestamp: number;
+  triggerTaskRefresh: () => void;
 }
 
 export const TaskModalContext = createContext<TaskModalContextType | undefined>(undefined);
@@ -35,18 +39,19 @@ const inter = Inter({
 });
 
 const SIDEBAR_WIDTH_OPEN_PX = 280;
-const SIDEBAR_WIDTH_CLOSED_DESKTOP_PX = 68;
+const SIDEBAR_WIDTH_CLOSED_DESKTOP_PX = 72;
 
 const applyThemeToHtml = (theme: 'light' | 'dark') => {
   const htmlElement = document.documentElement;
-  if (theme === 'dark') {
-    htmlElement.classList.add('dark');
-  } else {
-    htmlElement.classList.remove('dark');
-  }
+  htmlElement.classList.remove('light', 'dark');
+  htmlElement.classList.add(theme);
+  htmlElement.style.colorScheme = theme;
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+function MainLayoutContent({ children }: { children: ReactNode }) {
+  const { isAuthenticated, isLoading: authIsLoading } = useAuth();
+  const pathname = usePathname();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -55,57 +60,93 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
-  const handleOpenNewTaskModal = useCallback(() => {
+  const [projectsForModal, setProjectsForModal] = useState<ProjectData[]>([]);
+  const [currentProjectIdForModal, setCurrentProjectIdForModal] = useState<number | null>(null);
+  const [projectsLoading, setProjectsLoading] = useState<boolean>(false);
+
+  const [lastTaskOperationTimestamp, setLastTaskOperationTimestamp] = useState<number>(0);
+  const triggerTaskRefresh = useCallback(() => {
+    setLastTaskOperationTimestamp(Date.now());
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && !authIsLoading) {
+      setProjectsLoading(true);
+      fetchProjectsApi()
+        .then(data => {
+          setProjectsForModal(data);
+        })
+        .catch(err => {
+          setProjectsForModal([]);
+        })
+        .finally(() => {
+          setProjectsLoading(false);
+        });
+    } else if (!isAuthenticated && !authIsLoading) {
+      setProjectsForModal([]);
+      setProjectsLoading(false);
+    }
+  }, [isAuthenticated, authIsLoading]);
+
+  useEffect(() => {
+    if (pathname) {
+      const parts = pathname.split('/');
+      if (parts.length === 3 && parts[1] === 'project' && !isNaN(parseInt(parts[2]))) {
+        setCurrentProjectIdForModal(parseInt(parts[2]));
+      } else {
+        setCurrentProjectIdForModal(null);
+      }
+    }
+  }, [pathname]);
+
+  const handleOpenNewTaskModal = useCallback((preselectedProjectId?: number | null) => {
     setTaskToEdit(null);
+    const targetProjectId = preselectedProjectId !== undefined ? preselectedProjectId : currentProjectIdForModal;
+    setCurrentProjectIdForModal(targetProjectId);
     setIsTaskModalOpen(true);
     if (isMobileView && isSidebarOpen) setIsSidebarOpen(false);
-  }, [isMobileView, isSidebarOpen]);
+  }, [isMobileView, isSidebarOpen, currentProjectIdForModal]);
 
   const handleOpenEditTaskModal = useCallback((task: Task) => {
     setTaskToEdit(task);
+    setCurrentProjectIdForModal(task.projectId || currentProjectIdForModal);
     setIsTaskModalOpen(true);
     if (isMobileView && isSidebarOpen) setIsSidebarOpen(false);
-  }, [isMobileView, isSidebarOpen]);
+  }, [isMobileView, isSidebarOpen, currentProjectIdForModal]);
 
   const handleCloseTaskModal = useCallback(() => setIsTaskModalOpen(false), []);
 
   useEffect(() => {
-    setIsMounted(true); // Đánh dấu component đã mount ở client
-
-    // Theme initialization
+    setIsMounted(true);
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     const localTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const initialTheme = localTheme || (prefersDark ? 'dark' : 'light');
-    setCurrentTheme(initialTheme); // Set state
-    // applyThemeToHtml(initialTheme); // Apply class ngay lập tức
+    setCurrentTheme(initialTheme);
 
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobileView(mobile);
-      const storedSidebarState = localStorage.getItem('sidebarState');
+      const storedSidebarState = localStorage.getItem('sidebarState-v2');
       if (!mobile) {
         setIsSidebarOpen(storedSidebarState ? JSON.parse(storedSidebarState) : true);
       } else {
         setIsSidebarOpen(false);
       }
     };
-
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []); // Chỉ chạy 1 lần khi mount
+  }, []);
 
-  // Effect để áp dụng theme class khi currentTheme thay đổi (và isMounted)
   useEffect(() => {
     if (isMounted) {
       applyThemeToHtml(currentTheme);
     }
   }, [currentTheme, isMounted]);
 
-
   useEffect(() => {
     if (isMounted && !isMobileView) {
-      localStorage.setItem('sidebarState', JSON.stringify(isSidebarOpen));
+      localStorage.setItem('sidebarState-v2', JSON.stringify(isSidebarOpen));
     }
     if (isMounted) {
       document.body.style.overflow = (isSidebarOpen && isMobileView) ? 'hidden' : '';
@@ -117,86 +158,106 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 
-  // Hàm để Header có thể thay đổi theme
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setCurrentTheme(newTheme);
     localStorage.setItem('theme', newTheme);
   };
 
-
   if (!isMounted) {
-    // Render một placeholder đơn giản hoặc null để tránh hydration mismatch
-    // Quan trọng: không nên render UI phức tạp ở đây nếu nó phụ thuộc vào state client-side
     return (
-      <html lang="vi" suppressHydrationWarning>
-        <head />
-        <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
-          <div className="flex h-screen items-center justify-center text-muted-foreground">Đang tải ứng dụng...</div>
-        </body>
-      </html>
+      <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
+        Đang tải ứng dụng...
+      </div>
     );
   }
 
   return (
-    <html lang="vi" suppressHydrationWarning> {/* Class 'dark' sẽ được thêm/xóa bởi useEffect */}
-      <head />
+    <TaskModalContext.Provider value={{
+        openNewTaskModal: handleOpenNewTaskModal,
+        openEditTaskModal: handleOpenEditTaskModal,
+        lastTaskOperationTimestamp,
+        triggerTaskRefresh
+    }}>
+      <MotionConfig transition={{ type: "spring", stiffness: 350, damping: 35, duration: 0.25 }}>
+        <div className="relative flex min-h-dvh bg-background text-foreground">
+          <Sidebar
+            onOpenNewTaskModal={() => handleOpenNewTaskModal(currentProjectIdForModal)}
+            isSidebarOpen={isSidebarOpen}
+            toggleSidebar={toggleSidebar}
+            isMobileView={isMobileView}
+          />
+
+          <AnimatePresence>
+          {isSidebarOpen && isMobileView && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+              onClick={toggleSidebar}
+              aria-hidden="true"
+            />
+          )}
+          </AnimatePresence>
+
+          <div
+            className="flex flex-1 flex-col overflow-x-hidden transition-all duration-300 ease-in-out"
+            style={{
+              ['--sidebar-width-open' as string]: `${SIDEBAR_WIDTH_OPEN_PX}px`,
+              ['--sidebar-width-closed' as string]: `${SIDEBAR_WIDTH_CLOSED_DESKTOP_PX}px`,
+              marginLeft: isMobileView ? '0px' : (isSidebarOpen ? `var(--sidebar-width-open)` : `var(--sidebar-width-closed)`)
+            }}
+          >
+            <Header
+              onToggleSidebar={toggleSidebar}
+              isSidebarOpen={isSidebarOpen}
+              isMobileView={isMobileView}
+              currentTheme={currentTheme}
+              onThemeChange={handleThemeChange}
+            />
+            <main
+              className="flex-1 container main-container-padding py-6 md:py-8 focus:outline-none"
+              onClick={() => { if (isMobileView && isSidebarOpen) toggleSidebar(); }}
+              id="main-content"
+              role="main"
+            >
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </div>
+        <TaskFormModal
+          isOpen={isTaskModalOpen}
+          onClose={handleCloseTaskModal}
+          onSubmitSuccess={(submittedTask) => {
+            triggerTaskRefresh();
+            if (isAuthenticated && !authIsLoading) {
+                fetchProjectsApi().then(setProjectsForModal).catch(console.error);
+            }
+          }}
+          taskToEdit={taskToEdit}
+          projects={projectsForModal}
+          currentProjectId={currentProjectIdForModal}
+          isLoadingProjects={projectsLoading}
+        />
+      </MotionConfig>
+    </TaskModalContext.Provider>
+  );
+}
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="vi" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
-        <TooltipProvider delayDuration={100}> {/* Radix TooltipProvider */}
-          <TaskModalContext.Provider value={{ openNewTaskModal: handleOpenNewTaskModal, openEditTaskModal: handleOpenEditTaskModal }}>
-            <MotionConfig transition={{ type: "spring", stiffness: 300, damping: 30 }}>
-              <div className="relative flex min-h-dvh bg-background">
-                <Sidebar
-                  onOpenNewTaskModal={handleOpenNewTaskModal}
-                  isSidebarOpen={isSidebarOpen}
-                  toggleSidebar={toggleSidebar}
-                  isMobileView={isMobileView}
-                />
-
-                {isSidebarOpen && isMobileView && (
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden"
-                    onClick={toggleSidebar}
-                    aria-hidden="true"
-                  />
-                )}
-
-                <motion.div
-                  className="flex flex-1 flex-col overflow-x-hidden"
-                  style={{ '--sidebar-width-open': `${SIDEBAR_WIDTH_OPEN_PX}px`, '--sidebar-width-closed': `${SIDEBAR_WIDTH_CLOSED_DESKTOP_PX}px` } as React.CSSProperties}
-                  animate={{
-                    marginLeft: isMobileView ? 0 : (isSidebarOpen ? `var(--sidebar-width-open)` : `var(--sidebar-width-closed)`),
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30, duration:0.3 }}
-                >
-                  <Header
-                    onToggleSidebar={toggleSidebar}
-                    isSidebarOpen={isSidebarOpen}
-                    isMobileView={isMobileView}
-                    currentTheme={currentTheme} // Truyền theme hiện tại
-                    onThemeChange={handleThemeChange} // Truyền hàm thay đổi theme
-                  />
-                  <main
-                    className="flex-1 container main-container-padding py-6 md:py-8 focus:outline-none"
-                    onClick={() => { if (isMobileView && isSidebarOpen) toggleSidebar(); }}
-                    id="main-content"
-                    role="main"
-                  >
-                    {children}
-                  </main>
-                  <Footer />
-                </motion.div>
-              </div>
-              <TaskFormModal
-                isOpen={isTaskModalOpen}
-                onClose={handleCloseTaskModal}
-                onSubmitSuccess={() => { /* Refresh logic or let section handle it */ }}
-                taskToEdit={taskToEdit}
-              />
-            </MotionConfig>
-          </TaskModalContext.Provider>
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider delayDuration={100}>
+            <MainLayoutContent>{children}</MainLayoutContent>
+          </TooltipProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Task, updateTask } from '@/utils/apiClient';
+// Thêm TaskPayload và TaskStatus vào import
+import { Task, TaskPayload, TaskStatus, updateTask, handleApiError } from '@/utils/apiClient'; 
 import { cn } from '@/utils/cn';
 import { Edit3, Trash2, CalendarDays, Loader2 as LoaderIcon, MoreHorizontal, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -11,10 +12,11 @@ interface TaskItemProps {
   task: Task;
   onDeleteTask: (id: number) => Promise<void>;
   onEditTask: (task: Task) => void;
-  onStatusChange?: (task: Task) => void;
+  onStatusChange?: (updatedTask: Task) => void; // Chữ ký là (Task) => void
 }
 
-const statusConfig: Record<Task['status'], { icon?: React.ElementType; iconColor?: string; text: string; itemClasses?: string; titleClasses?: string }> = {
+// Sử dụng lại TaskStatus từ apiClient
+const statusConfig: Record<TaskStatus, { icon?: React.ElementType; iconColor?: string; text: string; itemClasses?: string; titleClasses?: string }> = {
   TODO: { 
     text: 'Cần làm',
     itemClasses: 'border-l-2 border-yellow-500 dark:border-yellow-400',
@@ -32,6 +34,11 @@ const statusConfig: Record<Task['status'], { icon?: React.ElementType; iconColor
     itemClasses: 'opacity-60 dark:opacity-50',
     titleClasses: 'line-through text-muted-foreground'
   },
+  CANCELLED: { // Thêm CANCELLED nếu bạn có trạng thái này
+    text: 'Đã hủy',
+    itemClasses: 'border-l-2 border-gray-400 dark:border-gray-500 opacity-70',
+    titleClasses: 'line-through text-muted-foreground'
+  }
 };
 
 const CustomCheckbox: React.FC<{ checked: boolean; onChange: (event: React.ChangeEvent<HTMLInputElement>) => void; id: string; disabled?: boolean }> = ({ checked, onChange, id, disabled }) => {
@@ -41,7 +48,7 @@ const CustomCheckbox: React.FC<{ checked: boolean; onChange: (event: React.Chang
         id={id}
         type="checkbox"
         checked={checked}
-        onChange={onChange} // onChange sẽ nhận event
+        onChange={onChange}
         disabled={disabled}
         className="sr-only peer"
       />
@@ -70,15 +77,15 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onDeleteTask, onEditTask, onS
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
 
-  const currentStatusConfig = statusConfig[task.status];
+  // Đảm bảo task.status là một key hợp lệ của statusConfig
+  const currentStatusConfig = statusConfig[task.status] || statusConfig.TODO; // Mặc định là TODO nếu status không hợp lệ
   const StatusIcon = currentStatusConfig.icon;
 
   const formattedDueDate = task.dueDate
-    ? new Date(task.dueDate + 'T00:00:00Z').toLocaleDateString('vi-VN', { day: '2-digit', month: 'numeric' }) // Thêm 'Z' để chỉ UTC
+    ? new Date(task.dueDate + 'T00:00:00Z').toLocaleDateString('vi-VN', { day: '2-digit', month: 'numeric' })
     : null;
 
   const isOverdue = task.dueDate && new Date(task.dueDate + 'T00:00:00Z') < new Date(new Date().setHours(0,0,0,0)) && task.status !== 'DONE';
-
 
   const cardVariants = {
     hidden: { opacity: 0, y: 8 },
@@ -87,44 +94,58 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onDeleteTask, onEditTask, onS
   };
 
   const handleCheckboxChangeInternal = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    event.stopPropagation(); // Ngăn sự kiện nổi bọt
+    event.stopPropagation();
     if (isLoadingStatus) return;
     setIsLoadingStatus(true);
     const newStatus = task.status === 'DONE' ? 'TODO' : 'DONE';
+    
+    // Đảm bảo task.projectId có giá trị
+    if (task.projectId === undefined || task.projectId === null) {
+      console.error("Không thể cập nhật trạng thái: Task không có projectId.", task);
+      alert("Lỗi: Task này không thuộc dự án nào.");
+      setIsLoadingStatus(false);
+      return;
+    }
+
+    const payload: TaskPayload = {
+      title: task.title,
+      description: task.description,
+      status: newStatus,
+      dueDate: task.dueDate,
+      projectId: task.projectId, // Thêm projectId
+      assigneeId: task.assigneeId, // Thêm assigneeId (nếu có)
+    };
+
     try {
-      const updatedTaskData = await updateTask(task.id, {
-        title: task.title,
-        description: task.description,
-        status: newStatus,
-        dueDate: task.dueDate,
-      });
+      const updatedTaskData = await updateTask(task.id, payload);
       if (onStatusChange) {
-        onStatusChange(updatedTaskData);
+        onStatusChange(updatedTaskData); // Gọi với task đã được cập nhật từ server
       }
     } catch (error) {
-      console.error("Không thể cập nhật trạng thái công việc:", error);
+      console.error("Không thể cập nhật trạng thái công việc:", handleApiError(error));
+      // Có thể thêm thông báo lỗi cho người dùng ở đây
+      // Và rollback trạng thái checkbox nếu cần (nhưng onStatusChange nên xử lý việc cập nhật state cha)
     } finally {
       setIsLoadingStatus(false);
     }
   };
   
   const handleEditClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation(); // Ngăn sự kiện nổi bọt
+    e.stopPropagation();
     onEditTask(task);
-    setIsMenuOpen(false); // Đóng menu nếu đang mở
+    setIsMenuOpen(false);
   };
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Ngăn sự kiện nổi bọt
+    e.stopPropagation();
     await onDeleteTask(task.id);
-    setIsMenuOpen(false); // Đóng menu
+    setIsMenuOpen(false);
   };
   
   const toggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsMenuOpen(!isMenuOpen);
   };
-
 
   return (
     <motion.div
@@ -147,7 +168,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onDeleteTask, onEditTask, onS
           onChange={handleCheckboxChangeInternal}
           disabled={isLoadingStatus}
         />
-        {isLoadingStatus && <LoaderIcon className="h-4 w-4 animate-spin text-primary ml-2" />}
+        {/* Không cần hiển thị LoaderIcon ở đây nữa vì nút checkbox đã có trạng thái disabled */}
       </div>
 
       <div 

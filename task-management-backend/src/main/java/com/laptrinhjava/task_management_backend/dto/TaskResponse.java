@@ -5,15 +5,14 @@ import java.time.LocalDateTime;
 
 import com.laptrinhjava.task_management_backend.model.TaskStatus;
 
-import lombok.AllArgsConstructor; // Giữ lại annotation này
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor // Lombok sẽ tự động tạo constructor: TaskResponse(Long id, String title, ..., LocalDateTime updatedAt)
+@AllArgsConstructor // Quan trọng: Tạo constructor với tất cả các trường
 public class TaskResponse {
-
     private Long id;
     private String title;
     private String description;
@@ -21,4 +20,9 @@ public class TaskResponse {
     private LocalDate dueDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    // Các trường này BẮT BUỘC phải có để khớp với constructor 11 tham số
+    private Long projectId;
+    private String projectName;
+    private Long assigneeId;
+    private String assigneeName;
 }

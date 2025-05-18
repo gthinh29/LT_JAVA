@@ -1,128 +1,220 @@
 package com.laptrinhjava.task_management_backend.service;
 
-import java.util.List; // Import DTO Request
-import java.util.Optional; // Import DTO Response
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.laptrinhjava.task_management_backend.dto.TaskRequest;
 import com.laptrinhjava.task_management_backend.dto.TaskResponse;
+import com.laptrinhjava.task_management_backend.exception.BadRequestException;
+import com.laptrinhjava.task_management_backend.exception.ResourceNotFoundException;
+import com.laptrinhjava.task_management_backend.exception.UnauthorizedAccessException;
+import com.laptrinhjava.task_management_backend.model.Project;
 import com.laptrinhjava.task_management_backend.model.Task;
-import com.laptrinhjava.task_management_backend.repository.TaskRepository; // Import cho stream
+// import com.laptrinhjava.task_management_backend.model.TaskStatus; // Không dùng trực tiếp trong PostConstruct nữa
+import com.laptrinhjava.task_management_backend.model.User;
+import com.laptrinhjava.task_management_backend.repository.ProjectRepository;
+import com.laptrinhjava.task_management_backend.repository.TaskRepository;
+import com.laptrinhjava.task_management_backend.repository.UserRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.beans.factory.annotation.Value; // Không dùng cho defaultUserEmailForDevData nữa
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+// import org.springframework.util.StringUtils; // Không dùng cho PostConstruct nữa
+
+// import jakarta.annotation.PostConstruct; // Không dùng PostConstruct nữa
+// import java.time.LocalDate; // Không dùng trực tiếp trong PostConstruct nữa
+// import java.time.LocalDateTime; // Không dùng trực tiếp trong PostConstruct nữa
+// import java.util.ArrayList; // Không dùng cho PostConstruct nữa
+// import java.util.Arrays; // Không dùng cho PostConstruct nữa
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final ProjectRepository projectRepository;
+    private final UserRepository userRepository;
+    private final UserService userService;
+
+    // @Value("${default.user.email:}") // Không cần thiết nếu bỏ PostConstruct
+    // private String defaultUserEmailForDevData;
 
     @Autowired
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository, 
+                       UserRepository userRepository, UserService userService) {
         this.taskRepository = taskRepository;
+        this.projectRepository = projectRepository;
+        this.userRepository = userRepository;
+        this.userService = userService;
     }
 
-    // --- Helper method để chuyển đổi Entity sang DTO Response ---
     private TaskResponse convertToDto(Task task) {
         if (task == null) {
             return null;
         }
-        // Sử dụng constructor của TaskResponse
         return new TaskResponse(
             task.getId(),
             task.getTitle(),
             task.getDescription(),
             task.getStatus(),
-            task.getDueDate(),
+            task.getDueDate(), 
             task.getCreatedAt(),
-            task.getUpdatedAt()
+            task.getUpdatedAt(),
+            task.getProject() != null ? task.getProject().getId() : null,
+            task.getProject() != null ? task.getProject().getName() : null,
+            task.getAssignee() != null ? task.getAssignee().getId() : null,
+            task.getAssignee() != null ? task.getAssignee().getName() : null
         );
-        // Hoặc sử dụng các phương thức set nếu dùng Lombok @Data cho TaskResponse
-        // TaskResponse dto = new TaskResponse();
-        // dto.setId(task.getId()); ... return dto;
     }
 
-    // --- Helper method để chuyển đổi DTO Request sang Entity ---
-    private Task convertToEntity(TaskRequest taskRequest) {
-        if (taskRequest == null) {
-            return null;
+    @Transactional
+    public TaskResponse createTask(TaskRequest taskRequest) {
+        User currentUser = userService.getCurrentAuthenticatedUserEntity();
+        if (currentUser == null) {
+            throw new UnauthorizedAccessException("Người dùng chưa được xác thực để tạo task.");
         }
+
         Task task = new Task();
-        // Set các thuộc tính từ request
         task.setTitle(taskRequest.getTitle());
         task.setDescription(taskRequest.getDescription());
         task.setStatus(taskRequest.getStatus());
         task.setDueDate(taskRequest.getDueDate());
-        // ID, createdAt, updatedAt sẽ được quản lý bởi JPA và callback
-        return task;
-    }
 
+        if (taskRequest.getProjectId() == null) {
+            throw new BadRequestException("Task phải thuộc về một dự án (projectId không được để trống).");
+        }
+        
+        Project project = projectRepository.findByIdAndOwnerId(taskRequest.getProjectId(), currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Dự án không tồn tại hoặc bạn không có quyền thêm task vào dự án này. ID dự án: " + taskRequest.getProjectId()));
+        task.setProject(project);
+        
+        if (taskRequest.getAssigneeId() != null) {
+            User assignee = userRepository.findById(taskRequest.getAssigneeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Người được giao không tồn tại với ID: " + taskRequest.getAssigneeId()));
+            task.setAssignee(assignee);
+        } else {
+            task.setAssignee(currentUser); 
+        }
 
-    // --- Các phương thức xử lý nghiệp vụ (CRUD) - Sử dụng DTO ---
-
-    // Tạo một Task mới từ DTO Request
-    public TaskResponse createTask(TaskRequest taskRequest) {
-        // Chuyển DTO Request thành Entity
-        Task taskToSave = convertToEntity(taskRequest);
-        // Các callback @PrePersist và @PreUpdate trong Entity sẽ tự set thời gian
-
-        // Lưu Entity vào DB
-        Task savedTask = taskRepository.save(taskToSave);
-
-        // Chuyển Entity đã lưu thành DTO Response và trả về
+        Task savedTask = taskRepository.save(task);
         return convertToDto(savedTask);
     }
 
-    // Lấy tất cả Tasks - Trả về danh sách DTO Response
-    public List<TaskResponse> getAllTasks() {
-        List<Task> tasks = taskRepository.findAll();
-        // Chuyển danh sách Entity thành danh sách DTO Response
-        return tasks.stream()
-                    .map(this::convertToDto) // Áp dụng hàm convertToDto cho mỗi phần tử
-                    .collect(Collectors.toList()); // Thu thập kết quả vào List
-    }
-
-    // Lấy một Task theo ID - Trả về Optional<DTO Response>
-    public Optional<TaskResponse> getTaskById(Long id) {
-        // Tìm Entity theo ID
-        Optional<Task> taskOptional = taskRepository.findById(id);
-
-        // Ánh xạ Optional<Entity> sang Optional<DTO>
-        // Nếu có Entity, chuyển nó thành DTO; nếu không, Optional vẫn rỗng
-        return taskOptional.map(this::convertToDto);
-    }
-
-    // Cập nhật một Task từ DTO Request
-    public TaskResponse updateTask(Long id, TaskRequest taskRequest) {
-        // Tìm Task hiện có theo ID
-        Optional<Task> taskOptional = taskRepository.findById(id);
-
-        if (taskOptional.isPresent()) {
-            Task existingTask = taskOptional.get();
-            // Cập nhật các thuộc tính của Task hiện có bằng dữ liệu từ DTO Request
-            existingTask.setTitle(taskRequest.getTitle());
-            existingTask.setDescription(taskRequest.getDescription());
-            existingTask.setStatus(taskRequest.getStatus());
-            existingTask.setDueDate(taskRequest.getDueDate());
-            // Các callback trong Entity sẽ tự set updatedAt
-
-            // Lưu lại Task đã cập nhật vào DB
-            Task updatedTaskEntity = taskRepository.save(existingTask);
-
-            // Chuyển Entity đã cập nhật thành DTO Response và trả về
-            return convertToDto(updatedTaskEntity);
-        } else {
-            // Xử lý trường hợp không tìm thấy Task (ví dụ: ném ngoại lệ)
-            throw new RuntimeException("Task not found with id " + id);
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getAllTasksByProjectIdForCurrentUser(Long projectId) {
+        User currentUser = userService.getCurrentAuthenticatedUserEntity();
+        if (currentUser == null) {
+            throw new UnauthorizedAccessException("Người dùng chưa được xác thực.");
         }
+        projectRepository.findByIdAndOwnerId(projectId, currentUser.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("Dự án không tồn tại hoặc bạn không có quyền truy cập. ID dự án: " + projectId));
+        
+        List<Task> tasks = taskRepository.findByProjectId(projectId);
+        return tasks.stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getAllTasksAssignedToCurrentUser() {
+        User currentUser = userService.getCurrentAuthenticatedUserEntity();
+        if (currentUser == null) {
+            throw new UnauthorizedAccessException("Người dùng chưa được xác thực.");
+        }
+        List<Task> tasks = taskRepository.findByAssigneeId(currentUser.getId());
+        return tasks.stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
     }
 
-    // Xóa một Task theo ID
-    public void deleteTask(Long id) {
-         // Có thể thêm kiểm tra taskOptional.isPresent() và ném lỗi nếu không tìm thấy trước khi gọi deleteById
-         // Nhưng deleteById của JpaRepository mặc định không ném lỗi nếu không tìm thấy ID
-        taskRepository.deleteById(id); // Xóa theo ID
+
+    @Transactional(readOnly = true)
+    public Optional<TaskResponse> getTaskByIdForCurrentUser(Long taskId) {
+        User currentUser = userService.getCurrentAuthenticatedUserEntity();
+         if (currentUser == null) {
+            throw new UnauthorizedAccessException("Người dùng chưa được xác thực.");
+        }
+
+        Optional<Task> taskOptional = taskRepository.findById(taskId);
+        if (taskOptional.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Task task = taskOptional.get();
+        if (task.getProject() != null && task.getProject().getOwner().getId().equals(currentUser.getId())) {
+            return Optional.of(convertToDto(task));
+        }
+        if (task.getAssignee() != null && task.getAssignee().getId().equals(currentUser.getId())) {
+             return Optional.of(convertToDto(task));
+        }
+        
+        throw new UnauthorizedAccessException("Bạn không có quyền truy cập task này. ID task: " + taskId);
     }
 
-    // Có thể thêm các phương thức nghiệp vụ phức tạp hơn tại đây sau này
+    @Transactional
+    public TaskResponse updateTask(Long taskId, TaskRequest taskRequest) {
+        User currentUser = userService.getCurrentAuthenticatedUserEntity();
+        if (currentUser == null) {
+            throw new UnauthorizedAccessException("Người dùng chưa được xác thực để cập nhật task.");
+        }
+
+        Task existingTask = taskRepository.findById(taskId)
+            .orElseThrow(() -> new ResourceNotFoundException("Task không tồn tại với ID: " + taskId));
+
+        boolean canUpdate = false;
+        if (existingTask.getProject() != null && existingTask.getProject().getOwner().getId().equals(currentUser.getId())) {
+            canUpdate = true;
+        } else if (existingTask.getAssignee() != null && existingTask.getAssignee().getId().equals(currentUser.getId())) {
+            canUpdate = true; 
+        }
+
+        if (!canUpdate) {
+            throw new UnauthorizedAccessException("Bạn không có quyền cập nhật task này. ID task: " + taskId);
+        }
+            
+        existingTask.setTitle(taskRequest.getTitle());
+        existingTask.setDescription(taskRequest.getDescription());
+        existingTask.setStatus(taskRequest.getStatus());
+        existingTask.setDueDate(taskRequest.getDueDate());
+
+        if (taskRequest.getProjectId() == null) {
+             throw new BadRequestException("Task phải thuộc về một dự án (projectId không được để trống khi cập nhật).");
+        }
+
+        if (!taskRequest.getProjectId().equals(existingTask.getProject().getId())) {
+            Project newProject = projectRepository.findByIdAndOwnerId(taskRequest.getProjectId(), currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Dự án mới không tồn tại hoặc bạn không có quyền. ID dự án: " + taskRequest.getProjectId()));
+            existingTask.setProject(newProject);
+        }
+        
+        if (taskRequest.getAssigneeId() != null) {
+            if (existingTask.getAssignee() == null || !taskRequest.getAssigneeId().equals(existingTask.getAssignee().getId())) {
+                User newAssignee = userRepository.findById(taskRequest.getAssigneeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Người được giao mới không tồn tại với ID: " + taskRequest.getAssigneeId()));
+                existingTask.setAssignee(newAssignee);
+            }
+        } else {
+            existingTask.setAssignee(null); 
+        }
+
+        Task updatedTaskEntity = taskRepository.save(existingTask);
+        return convertToDto(updatedTaskEntity);
+    }
+
+    @Transactional
+    public void deleteTask(Long taskId) {
+        User currentUser = userService.getCurrentAuthenticatedUserEntity();
+        if (currentUser == null) {
+            throw new UnauthorizedAccessException("Người dùng chưa được xác thực để xóa task.");
+        }
+        Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new ResourceNotFoundException("Task không tồn tại với ID: " + taskId));
+        
+        if (task.getProject() == null || !task.getProject().getOwner().getId().equals(currentUser.getId())) {
+            throw new UnauthorizedAccessException("Bạn không có quyền xóa task này vì không phải là chủ sở hữu dự án. ID task: " + taskId);
+        }
+        taskRepository.deleteById(taskId);
+    }
+
+    // Đã loại bỏ phương thức @PostConstruct initDefaultTasksForDevUser()
 }

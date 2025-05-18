@@ -9,45 +9,45 @@
   *,
   *::before,
   *::after {
-    box-sizing: border-box; /* SỬA Ở ĐÂY: Đây là thuộc tính CSS, không phải class Tailwind */
-    @apply border-border; /* Các class Tailwind khác vẫn giữ nguyên */
+    box-sizing: border-box;
+    @apply border-border;
     -webkit-tap-highlight-color: transparent;
   }
 
   html {
     @apply scroll-smooth subpixel-antialiased;
-    -webkit-font-smoothing: subpixel-antialiased;
+    -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-size: 16px;
-    line-height: 1.65;
+    line-height: 1.6;
     color-scheme: light dark;
   }
 
   body {
     @apply bg-background text-foreground font-sans;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv05" 1;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
 
-  h1, .h1 { @apply text-3xl md:text-4xl font-bold tracking-tight mb-6 text-foreground; }
-  h2, .h2 { @apply text-2xl md:text-3xl font-bold tracking-tight mt-8 mb-4 text-foreground; }
-  h3, .h3 { @apply text-xl md:text-2xl font-semibold tracking-tight mt-6 mb-3 text-foreground; }
-  h4, .h4 { @apply text-lg md:text-xl font-semibold tracking-tight mt-4 mb-2 text-foreground; }
-  p, ul, ol { @apply mb-4 text-foreground/90; }
+  h1, .h1 { @apply text-3xl md:text-4xl font-extrabold tracking-tighter mb-6 text-foreground; }
+  h2, .h2 { @apply text-2xl md:text-3xl font-bold tracking-tight mt-10 mb-5 text-foreground; }
+  h3, .h3 { @apply text-xl md:text-2xl font-semibold tracking-tight mt-8 mb-4 text-foreground; }
+  h4, .h4 { @apply text-lg md:text-xl font-semibold tracking-tight mt-6 mb-3 text-foreground; }
+  p, ul, ol { @apply mb-5 text-foreground/90 leading-relaxed; }
 
   a {
-    @apply text-primary decoration-primary/50 underline-offset-4 hover:text-primary/80 hover:decoration-primary/70 focus-visible:decoration-primary/70;
-    @apply transition-colors duration-150;
+    @apply text-primary decoration-primary/60 underline-offset-4 hover:text-primary/80 hover:decoration-primary focus-visible:decoration-primary;
+    @apply transition-all duration-150 ease-in-out;
   }
   a:not([class]) {
-    @apply underline hover:no-underline;
+    @apply underline hover:no-underline font-medium;
   }
 
   *:focus-visible {
-    @apply outline-none ring-2 ring-primary/80 ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-primary/70 ring-offset-2 ring-offset-background rounded-sm;
   }
 
   input[type="date"]::-webkit-calendar-picker-indicator,
@@ -59,7 +59,7 @@
     appearance: none; -moz-appearance: textfield;
   }
 
-  [data-radix-popper-content-wrapper] { z-index: 100 !important; }
+  [data-radix-popper-content-wrapper] { z-index: 1000 !important; }
 
   .DropdownMenuContent[data-state='open'],
   .PopoverContent[data-state='open'],
@@ -72,100 +72,100 @@
     @apply animate-out fade-out-0 zoom-out-95 data-[side=bottom]:slide-out-to-top-2 data-[side=left]:slide-out-to-right-2 data-[side=right]:slide-out-to-left-2 data-[side=top]:slide-out-to-bottom-2;
   }
 
-  .custom-scrollbar::-webkit-scrollbar { @apply w-1.5 h-1.5; }
+  .custom-scrollbar::-webkit-scrollbar { @apply w-2 h-2; }
   .custom-scrollbar::-webkit-scrollbar-track { @apply bg-transparent; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { @apply bg-muted-foreground/20 rounded-full border-2 border-transparent bg-clip-content; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/40; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { @apply bg-muted-foreground/30 rounded-full border-[3px] border-transparent bg-clip-content; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/50; }
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
   }
   .custom-scrollbar:hover {
-    scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.5) transparent;
   }
 }
 
 @layer components {
-  .main-container-padding { @apply px-4 sm:px-5 md:px-6 lg:px-8; }
+  .main-container-padding { @apply px-4 sm:px-6 md:px-8 lg:px-10; }
 
-  @layer components {
   .button-base {
-    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 ease-out disabled:pointer-events-none disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-semibold
+           transition-all duration-200 ease-out
+           disabled:pointer-events-none disabled:opacity-50
+           focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
   .button-primary {
-    @apply bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:bg-primary/80 active:shadow-inner;
+    @apply bg-primary text-primary-foreground shadow-md hover:bg-primary/90 active:bg-primary/80 active:shadow-inner transform active:scale-[0.98];
   }
   .button-secondary {
-    @apply bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/90 active:bg-secondary/80 active:shadow-inner;
+    @apply bg-secondary text-secondary-foreground shadow-md hover:bg-secondary/90 active:bg-secondary/80 active:shadow-inner transform active:scale-[0.98];
   }
   .button-danger {
-    @apply bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:bg-destructive/80 active:shadow-inner;
+    @apply bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 active:bg-destructive/80 active:shadow-inner transform active:scale-[0.98];
   }
 
-  .button-outline { @apply border border-input bg-transparent hover:bg-accent hover:text-accent-foreground active:bg-accent/80; }
-  .button-ghost { @apply hover:bg-accent hover:text-accent-foreground active:bg-accent/90; }
-  .button-link { @apply text-primary underline-offset-4 hover:underline hover:text-primary/80 active:text-primary/70 px-0 py-0 h-auto; }
+  .button-outline { @apply border border-input bg-transparent hover:bg-accent hover:text-accent-foreground active:bg-accent/80 transform active:scale-[0.98]; }
+  .button-ghost { @apply hover:bg-accent hover:text-accent-foreground active:bg-accent/90 transform active:scale-[0.99]; }
+  .button-link { @apply text-primary underline-offset-4 hover:underline hover:text-primary/80 active:text-primary/70 px-0 py-0 h-auto font-semibold; }
 
   .input-field, .textarea-field, .select-field {
-    @apply flex w-full rounded-md border border-input bg-transparent text-sm ring-offset-background
-           placeholder:text-muted-foreground
-           focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/50
-           disabled:cursor-not-allowed disabled:opacity-50
-           transition-colors duration-150 ease-in-out;
+    @apply flex w-full rounded-lg border border-input bg-transparent text-sm ring-offset-background
+           placeholder:text-muted-foreground/80
+           focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40
+           disabled:cursor-not-allowed disabled:opacity-60
+           transition-all duration-150 ease-in-out;
   }
   .input-field, .select-field { @apply h-10 px-3.5 py-2; }
-  .textarea-field { @apply px-3.5 py-2.5 min-h-[80px] leading-snug; }
+  .textarea-field { @apply px-3.5 py-2.5 min-h-[88px] leading-snug; }
 
-
-
-  .card { @apply rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow duration-200 ease-out; }
-  .card-header { @apply flex flex-col space-y-1.5 p-4 md:p-5; }
+  .card { @apply rounded-xl border bg-card text-card-foreground shadow-lg transition-all duration-200 ease-out hover:shadow-xl; }
+  .card-header { @apply flex flex-col space-y-1.5 p-5 md:p-6; }
   .card-title { @apply text-lg md:text-xl font-semibold leading-none tracking-tight; }
   .card-description { @apply text-sm text-muted-foreground; }
-  .card-content { @apply p-4 md:p-5; }
-  .card-footer { @apply flex items-center p-4 md:p-5 border-t mt-4; }
+  .card-content { @apply p-5 md:p-6 pt-0; }
+  .card-footer { @apply flex items-center p-5 md:p-6 border-t mt-5; }
 
-  .alert-base { @apply relative w-full rounded-lg border p-4 [&:has(svg)]:pl-12 [&>svg+div]:translate-y-[-2px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-[1.1rem] [&>svg]:h-5 [&>svg]:w-5; }
-  .alert-destructive { @apply border-destructive/40 bg-destructive/5 text-destructive dark:border-destructive/50 dark:bg-destructive/10 [&>svg]:text-destructive; }
-  .alert-success { @apply border-green-500/40 bg-green-500/5 text-green-700 dark:border-green-500/50 dark:bg-green-500/10 dark:text-green-300 [&>svg]:text-green-600 dark:[&>svg]:text-green-400; }
-  .alert-info { @apply border-blue-500/40 bg-blue-500/5 text-blue-700 dark:border-blue-500/50 dark:bg-blue-500/10 dark:text-blue-300 [&>svg]:text-blue-600 dark:[&>svg]:text-blue-400; }
-  .alert-warning { @apply border-yellow-500/40 bg-yellow-500/5 text-yellow-700 dark:border-yellow-500/50 dark:bg-yellow-500/10 dark:text-yellow-300 [&>svg]:text-yellow-600 dark:[&>svg]:text-yellow-400; }
+  .alert-base { @apply relative w-full rounded-lg border p-4 [&:has(svg)]:pl-14 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-5 [&>svg]:top-[1.2rem] [&>svg]:h-6 [&>svg]:w-6; }
+  .alert-destructive { @apply border-destructive/50 bg-destructive/10 text-destructive dark:border-destructive/60 dark:bg-destructive/15 [&>svg]:text-destructive; }
+  .alert-success { @apply border-green-500/50 bg-green-500/10 text-green-700 dark:border-green-500/60 dark:bg-green-500/15 dark:text-green-300 [&>svg]:text-green-600 dark:[&>svg]:text-green-400; }
+  .alert-info { @apply border-blue-500/50 bg-blue-500/10 text-blue-700 dark:border-blue-500/60 dark:bg-blue-500/15 dark:text-blue-300 [&>svg]:text-blue-600 dark:[&>svg]:text-blue-400; }
+  .alert-warning { @apply border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:border-yellow-500/60 dark:bg-yellow-500/15 dark:text-yellow-300 [&>svg]:text-yellow-600 dark:[&>svg]:text-yellow-400; }
 
-  .react-datepicker-popper { z-index: 1001 !important; @apply shadow-xl rounded-lg mt-1.5; }
-  .custom-datepicker-calendar-small { @apply bg-popover border border-border rounded-lg text-xs shadow-lg; font-family: var(--font-sans); width: 270px; }
-  .custom-datepicker-calendar-small .react-datepicker__header { @apply bg-popover text-popover-foreground pt-3 pb-2 px-2.5 rounded-t-lg border-b border-border; }
-  .custom-datepicker-calendar-small .react-datepicker__current-month { @apply text-popover-foreground font-semibold text-sm mb-2; }
-  .custom-datepicker-calendar-small .react-datepicker__navigation { @apply top-3 h-8 w-8 rounded-full hover:bg-accent flex items-center justify-center; }
-  .custom-datepicker-calendar-small .react-datepicker__navigation--previous { left: 8px; }
-  .custom-datepicker-calendar-small .react-datepicker__navigation--next { right: 8px; }
-  .custom-datepicker-calendar-small .react-datepicker__navigation-icon::before { border-color: hsl(var(--popover-foreground)) !important; border-width: 2px 2px 0 0 !important; height: 7px !important; width: 7px !important; top: 0 !important; }
-  .custom-datepicker-calendar-small .react-datepicker__month-container { @apply px-1 pb-1; }
-  .custom-datepicker-calendar-small .react-datepicker__day-names { @apply flex justify-around mb-1; }
+  .react-datepicker-popper { z-index: 1001 !important; @apply shadow-2xl rounded-lg mt-2; }
+  .custom-datepicker-calendar-small { @apply bg-popover border border-border rounded-lg text-xs shadow-lg; font-family: var(--font-sans); width: 280px; }
+  .custom-datepicker-calendar-small .react-datepicker__header { @apply bg-popover text-popover-foreground pt-3.5 pb-2.5 px-3 rounded-t-lg border-b border-border; }
+  .custom-datepicker-calendar-small .react-datepicker__current-month { @apply text-popover-foreground font-semibold text-[0.9rem] mb-2.5; }
+  .custom-datepicker-calendar-small .react-datepicker__navigation { @apply top-3.5 h-9 w-9 rounded-full hover:bg-accent flex items-center justify-center transition-colors; }
+  .custom-datepicker-calendar-small .react-datepicker__navigation--previous { left: 10px; }
+  .custom-datepicker-calendar-small .react-datepicker__navigation--next { right: 10px; }
+  .custom-datepicker-calendar-small .react-datepicker__navigation-icon::before { border-color: hsl(var(--popover-foreground)) !important; border-width: 2px 2px 0 0 !important; height: 8px !important; width: 8px !important; top: -1px !important; }
+  .custom-datepicker-calendar-small .react-datepicker__month-container { @apply px-1.5 pb-1.5; }
+  .custom-datepicker-calendar-small .react-datepicker__day-names { @apply flex justify-around mb-1.5; }
   .custom-datepicker-calendar-small .react-datepicker__week { @apply flex justify-around; }
-  .custom-datepicker-calendar-small .react-datepicker__day-name { @apply w-8 h-8 flex items-center justify-center text-xs font-medium text-muted-foreground; }
-  .custom-datepicker-day-small { @apply w-8 h-8 flex items-center justify-center rounded-md cursor-pointer m-px text-popover-foreground hover:bg-accent hover:text-accent-foreground transition-colors duration-100 text-xs; }
+  .custom-datepicker-calendar-small .react-datepicker__day-name { @apply w-9 h-9 flex items-center justify-center text-xs font-medium text-muted-foreground; }
+  .custom-datepicker-day-small { @apply w-9 h-9 flex items-center justify-center rounded-lg cursor-pointer m-px text-popover-foreground hover:bg-accent hover:text-accent-foreground transition-colors duration-100 text-xs; }
   .custom-datepicker-day-small.react-datepicker__day--selected,
-  .custom-datepicker-day-small.react-datepicker__day--keyboard-selected { @apply bg-primary text-primary-foreground hover:bg-primary/90; }
-  .custom-datepicker-day-small.react-datepicker__day--outside-month { @apply text-muted-foreground/40 cursor-default hover:bg-transparent; }
-  .custom-datepicker-today-small.react-datepicker__day:not(.react-datepicker__day--selected) { @apply bg-primary/10 text-primary font-semibold border border-primary/30; }
+  .custom-datepicker-day-small.react-datepicker__day--keyboard-selected { @apply bg-primary text-primary-foreground hover:bg-primary/90 font-semibold; }
+  .custom-datepicker-day-small.react-datepicker__day--outside-month { @apply text-muted-foreground/30 cursor-default hover:bg-transparent; }
+  .custom-datepicker-today-small.react-datepicker__day:not(.react-datepicker__day--selected) { @apply bg-primary/15 text-primary font-semibold border border-primary/40; }
   .custom-datepicker-calendar-small .react-datepicker__year-read-view,
   .custom-datepicker-calendar-small .react-datepicker__month-read-view,
-  .custom-datepicker-calendar-small .react-datepicker__month-year-read-view { @apply border border-transparent rounded-md px-1.5 py-1 text-xs hover:border-border hover:bg-accent; display: inline-block; }
+  .custom-datepicker-calendar-small .react-datepicker__month-year-read-view { @apply border border-transparent rounded-md px-2 py-1.5 text-xs hover:border-border hover:bg-accent transition-colors; display: inline-block; }
   .custom-datepicker-calendar-small .react-datepicker__year-read-view--down-arrow,
   .custom-datepicker-calendar-small .react-datepicker__month-read-view--down-arrow,
-  .custom-datepicker-calendar-small .react-datepicker__month-year-read-view--down-arrow { border-color: hsl(var(--muted-foreground)) !important; border-width: 1.5px 1.5px 0 0 !important; height: 5px !important; width: 5px !important; top: 1px !important; right: -5px !important; margin-top: 0px !important; }
+  .custom-datepicker-calendar-small .react-datepicker__month-year-read-view--down-arrow { border-color: hsl(var(--muted-foreground)) !important; border-width: 1.5px 1.5px 0 0 !important; height: 6px !important; width: 6px !important; top: 0px !important; right: -6px !important; margin-top: 0px !important; }
   .custom-datepicker-calendar-small .react-datepicker__year-dropdown,
   .custom-datepicker-calendar-small .react-datepicker__month-dropdown,
-  .custom-datepicker-calendar-small .react-datepicker__month-year-dropdown { @apply bg-popover border border-border rounded-md shadow-lg max-h-40 overflow-y-auto text-xs custom-scrollbar; }
+  .custom-datepicker-calendar-small .react-datepicker__month-year-dropdown { @apply bg-popover border border-border rounded-md shadow-lg max-h-44 overflow-y-auto text-xs custom-scrollbar; }
   .custom-datepicker-calendar-small .react-datepicker__year-option,
   .custom-datepicker-calendar-small .react-datepicker__month-option,
-  .custom-datepicker-calendar-small .react-datepicker__month-year-option { @apply px-2.5 py-1.5 text-xs hover:bg-accent; }
+  .custom-datepicker-calendar-small .react-datepicker__month-year-option { @apply px-3 py-2 text-xs hover:bg-accent transition-colors; }
   .custom-datepicker-calendar-small .react-datepicker__year-option--selected_year,
   .custom-datepicker-calendar-small .react-datepicker__month-option--selected_month { @apply bg-primary/20 text-primary font-semibold; }
   .react-datepicker__input-container { @apply relative; }
-  .react-datepicker__input-container .react-datepicker__close-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); padding: 0 !important; cursor: pointer; background-color: transparent !important; border: none !important; outline: none !important; width: 24px !important; height: 24px !important; opacity: 0.6; transition: opacity 0.15s; }
-  .react-datepicker__input-container .react-datepicker__close-icon:hover { opacity: 1; }
-  .react-datepicker__input-container .react-datepicker__close-icon::after { content: '×'; font-family: Arial, sans-serif; color: hsl(var(--muted-foreground)) !important; font-size: 26px !important; line-height: 1; display: flex !important; align-items: center !important; justify-content: center !important; width: 100%; height: 100%; }
+  .react-datepicker__input-container .react-datepicker__close-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); padding: 0 !important; cursor: pointer; background-color: transparent !important; border: none !important; outline: none !important; width: 28px !important; height: 28px !important; opacity: 0.5; transition: opacity 0.15s; }
+  .react-datepicker__input-container .react-datepicker__close-icon:hover { opacity: 0.8; }
+  .react-datepicker__input-container .react-datepicker__close-icon::after { content: '×'; font-family: Arial, sans-serif; color: hsl(var(--muted-foreground)) !important; font-size: 28px !important; line-height: 1; display: flex !important; align-items: center !important; justify-content: center !important; width: 100%; height: 100%; }
   .react-datepicker__input-container .react-datepicker__close-icon:hover::after { color: hsl(var(--foreground)) !important; }
 }
 
@@ -175,10 +175,12 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    text-overflow: ellipsis;
     -webkit-line-clamp: 2;
     line-clamp: 2;
   }
   .disabled-ui { @apply opacity-50 pointer-events-none cursor-not-allowed; }
-  .scroll-mt-header { scroll-margin-top: 70px; }
-}
+  .scroll-mt-header { scroll-margin-top: 80px; }
+  .print\:hidden { @media print { display: none !important; } }
+  .transform-gpu { transform: translateZ(0); }
 }

@@ -3,24 +3,23 @@ services:
   # Dịch vụ cơ sở dữ liệu
   db:
     image: mysql:8.0
-    restart: always # Luôn khởi động lại nếu dừng
+    restart: always
     environment:
       MYSQL_DATABASE: taskdb
       MYSQL_USER: devuser
       MYSQL_PASSWORD: devpassword
       MYSQL_ROOT_PASSWORD: rootpassword
-      # Đảm bảo tương thích (MySQL 8 mặc định dùng caching_sha2_password)
       MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
     ports:
       - "3306:3306"
     volumes:
-      - db_data:/var/lib/mysql # Lưu trữ dữ liệu DB bền vững
-    healthcheck: # Kiểm tra DB đã sẵn sàng
+      - db_data:/var/lib/mysql
+    healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 30s # Chờ trước khi bắt đầu kiểm tra
+      start_period: 30s
 
   # Dịch vụ Backend
   backend:
@@ -28,13 +27,20 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Cấu hình kết nối DB cho Spring Boot
+      # Cấu hình kết nối DB cho Spring Boot (giữ nguyên từ file gốc)
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/taskdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: devuser
       SPRING_DATASOURCE_PASSWORD: devpassword
+      
+      # Biến môi trường cho Google OAuth2 Client (QUAN TRỌNG: Thay bằng giá trị thật của bạn hoặc dùng .env file)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID_FROM_ENV} # Client ID bạn đã cung cấp
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET_FROM_ENV} # Client Secret bạn đã cung cấp
+      
+      # Biến môi trường cho URL Frontend (để backend biết URL redirect và CORS)
+      FRONTEND_URL: "http://localhost:3000" # Hoặc URL frontend thực tế của bạn khi deploy
     depends_on:
       db:
-        condition: service_healthy # Chờ DB khỏe mạnh hoàn toàn
+        condition: service_healthy
 
   # Dịch vụ Frontend
   frontend:
@@ -42,12 +48,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # URL API Backend cho Frontend Next.js
+      # URL API Backend cho Frontend Next.js (giữ nguyên từ file gốc)
       NEXT_PUBLIC_BACKEND_API_URL: http://backend:8080
+      # Bạn cũng có thể thêm các biến môi trường khác cho frontend ở đây nếu cần
+      # Ví dụ: NEXT_PUBLIC_GOOGLE_CLIENT_ID (nếu frontend cần Client ID cho Google SDK, nhưng thường không cần cho luồng OAuth2 redirect)
     depends_on:
       backend:
-        condition: service_started # Chờ Backend khởi động
+        condition: service_started
 
 # Định nghĩa các volume để lưu trữ dữ liệu
 volumes:
-  db_data: # Volume cho dữ liệu MySQL
+  db_data:
