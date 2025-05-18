@@ -1,0 +1,112 @@
+# Loại trừ các tệp chứa biến môi trường và secret
+# Quan trọng: Luôn thêm các tệp này để tránh lộ thông tin nhạy cảm!
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+application-local.properties
+application-dev.properties
+secrets.yml
+*.pem
+*.key
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+node_modules/.cache
+
+# Phụ thuộc của Node (cho frontend Next.js)
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Thư mục build của Next.js
+.next/
+out/
+
+# Thư mục build của Spring Boot (Maven/Gradle)
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+
+# Gradle
+build/
+.gradle/
+bin/ # nếu bạn build ra thư mục bin
+
+# Các tệp tạm thời hoặc do IDE tạo ra
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+modules.xml
+out/ # Thư mục build mặc định của IntelliJ
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/ # Thư mục class mặc định của Eclipse
+
+# NetBeans
+nbproject/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+Icon? # Windows Icon DB
+._* # Resource fork
+
+# Windows
+Desktop.ini
+
+# Các tệp nén
+*.zip
+*.tar.*
+*.rar
+*.7z
+
+# Các tệp khác
+coverage/ # Thư mục báo cáo coverage của test
+.nyc_output/
+*.tgz
+*.swp # Vim swap files
+
+# Docker
+docker-compose.override.yml # Override file thường chứa cấu hình local
+
+# Nếu bạn có các thư mục hoặc tệp cụ thể khác cần loại trừ, hãy thêm vào đây
+# Ví dụ:
+# uploads/
+# temp/

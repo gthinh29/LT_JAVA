@@ -30,11 +30,12 @@ services:
       # Cấu hình kết nối DB cho Spring Boot (giữ nguyên từ file gốc)
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/taskdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: devuser
-      SPRING_DATASOURCE_PASSWORD: devpassword
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       
       # Biến môi trường cho Google OAuth2 Client (QUAN TRỌNG: Thay bằng giá trị thật của bạn hoặc dùng .env file)
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID_FROM_ENV} # Client ID bạn đã cung cấp
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET_FROM_ENV} # Client Secret bạn đã cung cấp
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID} # Client ID bạn đã cung cấp
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
       
       # Biến môi trường cho URL Frontend (để backend biết URL redirect và CORS)
       FRONTEND_URL: "http://localhost:3000" # Hoặc URL frontend thực tế của bạn khi deploy
